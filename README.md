@@ -91,6 +91,16 @@ scripts/dev.sh restart  # 重新启动全部服务
 
 下面保留分步启动方式，便于学习每个进程的职责和单独排障。
 
+## 稳定 HTTPS 部署
+
+仓库已提供 `Dockerfile`、`render.yaml` 和 GitHub Actions CI。生产构建会把
+React 与 FastAPI 放在同一个容器和 HTTPS 域名下，并自动关闭 Swagger 与
+调试接口。Render 会自动提供 `RENDER_EXTERNAL_URL`，无需再手动维护 ngrok
+回调地址。
+
+完整部署步骤、环境变量清单和免费实例限制见
+[`docs/deployment.md`](docs/deployment.md)。
+
 ### 1. 前置条件
 
 - Node.js 16+
@@ -203,7 +213,7 @@ cd rag_llm_server
 python -m unittest discover -s tests -v
 ```
 
-当前 6 条测试会防止 RTC 权限键序列化、场景机器人身份、ngrok 地址自动更新、代理操作越权和 CORS 范围等问题再次出现。
+当前 10 条测试会防止 RTC 权限键序列化、场景机器人身份、ngrok 地址自动更新、代理操作越权、CORS 范围、托管地址解析和生产路由暴露等问题再次出现。
 
 ## 关键问题复盘
 

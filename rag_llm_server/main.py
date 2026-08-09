@@ -1,11 +1,13 @@
 import json
 import time
+from pathlib import Path
 from typing import List
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from config import settings
@@ -15,15 +17,26 @@ from services.rag_service import rag_service
 from services.token_build import AccessToken, PRIVILEGES
 from services.utils import Signer
 
-app = FastAPI()
+is_production = settings.APP_ENV == "production"
+app = FastAPI(
+    docs_url=None if is_production else "/docs",
+    redoc_url=None if is_production else "/redoc",
+    openapi_url=None if is_production else "/openapi.json",
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:4173", "http://localhost:4173"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def require_debug_mode() -> None:
+    """Keep cost-bearing debug endpoints out of the public deployment."""
+    if settings.APP_ENV == "production":
+        raise HTTPException(status_code=404, detail="Not Found")
 
 
 @app.get("/health")
@@ -271,7 +284,7 @@ class DebugRequest(BaseModel):
 # 2. 调试接口
 @app.post("/debug/chat")
 async def debug_chat(request: DebugRequest):
-
+    require_debug_mode()
 
     # 构造当前发送给 LLM 的消息列表
     current_messages = []
@@ -347,6 +360,7 @@ async def debug_rag(query: str):
     调试接口：直接返回知识库检索到的原始文本内容
     用法：浏览器访问 http://127.0.0.1:3001/debug/rag?query=你的问题
     """
+    require_debug_mode()
     if not query:
         return {"error": "请提供 query 参数"}
 
@@ -363,8 +377,55 @@ async def debug_rag(query: str):
     }
 
 
+frontend_build_dir = Path(
+    settings.FRONTEND_BUILD_DIR
+    or Path(__file__).resolve().parents[1] / "build"
+).resolve()
+frontend_index = frontend_build_dir / "index.html"
+backend_path_roots = {
+    "api",
+    "debug",
+    "docs",
+    "getScenes",
+    "health",
+    "openapi.json",
+    "proxy",
+    "redoc",
+}
 
+if frontend_index.is_file():
+    static_dir = frontend_build_dir / "static"
+    if static_dir.is_dir():
+        app.mount(
+            "/static",
+            StaticFiles(directory=static_dir),
+            name="frontend-static",
+        )
 
+    @app.get("/", include_in_schema=False)
+    async def frontend_root():
+        return FileResponse(frontend_index)
+
+    @app.get("/{frontend_path:path}", include_in_schema=False)
+    async def frontend_fallback(frontend_path: str):
+        first_segment = frontend_path.split("/", 1)[0]
+        if first_segment in backend_path_roots:
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        candidate = (frontend_build_dir / frontend_path).resolve()
+        try:
+            candidate.relative_to(frontend_build_dir)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        if candidate.is_file():
+            return FileResponse(candidate)
+
+        # Browser routes fall back to the SPA shell. Missing files should remain
+        # a real 404 so caching layers do not store index.html as an asset.
+        if Path(frontend_path).suffix:
+            raise HTTPException(status_code=404, detail="Not Found")
+        return FileResponse(frontend_index)
 
 
 if __name__ == "__main__":
