@@ -4,6 +4,10 @@
 
 本项目用于学习和作品集展示，重点是完整串联实时音频、知识检索、大模型与可观测后端，而不是只调用一次聊天接口。
 
+**在线体验：** [https://dongxiaozhi-voice-rag.onrender.com](https://dongxiaozhi-voice-rag.onrender.com)
+
+免费实例闲置后会休眠，首次打开可能需要约一分钟唤醒；进入页面后请允许麦克风权限。
+
 ## 已实现能力
 
 - 浏览器麦克风采集与 RTC 房间通信
@@ -15,6 +19,7 @@
 - 回调 Bearer Token 鉴权与公网接口隔离
 - Swagger 调试接口、健康检查和错误日志
 - 知识库外问题降级、动态信息转人工、禁止就业承诺
+- Docker 单容器生产部署、Render Blueprint 与 GitHub Actions CI
 
 ## 系统架构
 
@@ -22,21 +27,21 @@
 flowchart LR
     U["用户浏览器"] -->|"麦克风音频"| RTC["火山引擎 RTC"]
     RTC --> ASR["ASR 语音识别"]
-    ASR -->|"用户问题"| CB["公网回调服务 :3002"]
+    ASR -->|"用户问题"| CB["FastAPI CustomLLM 回调"]
     CB --> RAG["课程知识库检索"]
     RAG --> LLM["火山方舟大模型"]
     LLM -->|"流式文本"| RTC
     RTC --> TTS["TTS 语音合成"]
     TTS -->|"AI 音频"| U
     RTC -->|"用户与 AI 字幕"| U
-    WEB["本地业务服务 :3001"] -->|"Token、场景与任务控制"| RTC
+    WEB["FastAPI 业务服务"] -->|"Token、场景与任务控制"| RTC
     U --> WEB
 ```
 
 ### 设计说明
 
-- `3001` 是本地业务与调试服务，包含 RTC Token、任务控制和 Swagger，不暴露到公网。
-- `3002` 只提供健康检查和带鉴权的 CustomLLM 回调，由 ngrok 暴露给 RTC 云服务。
+- 本地开发时，`3001` 提供业务与调试接口，`3002` 作为最小 CustomLLM 公网回调并通过 ngrok 暴露。
+- 生产环境把 React 与 FastAPI 放进同一个 Docker 容器和 HTTPS 域名；Swagger、OpenAPI 和调试路由自动关闭。
 - `.env` 保存真实凭证并被 Git 忽略；仓库只提交无密钥的 `.env.example`。
 - 实时对话默认关闭深度思考，优先保证首包速度和交互自然度。
 
@@ -97,6 +102,8 @@ scripts/dev.sh restart  # 重新启动全部服务
 React 与 FastAPI 放在同一个容器和 HTTPS 域名下，并自动关闭 Swagger 与
 调试接口。Render 会自动提供 `RENDER_EXTERNAL_URL`，无需再手动维护 ngrok
 回调地址。
+
+当前生产服务：<https://dongxiaozhi-voice-rag.onrender.com>
 
 完整部署步骤、环境变量清单和免费实例限制见
 [`docs/deployment.md`](docs/deployment.md)。
@@ -224,11 +231,12 @@ python -m unittest discover -s tests -v
 
 ## 当前限制与下一步
 
-- ngrok 免费地址可能变化，正式部署应使用稳定 HTTPS 域名。
+- Render 免费实例闲置后会休眠，正式演示前需要先访问 `/health` 预热。
+- ngrok 只用于本地开发，地址变化时需要由一键脚本更新本机 `SERVER_URL`。
 - 当前使用固定房间和任务 ID，适合单人演示；多人并发需要动态会话管理。
 - AI 回复可能按语音句号拆成多个气泡，后续可按同一轮对话合并。
 - 当前生产构建的主 JavaScript gzip 后约 2.74 MB，可继续通过懒加载和拆包优化首屏体积。
-- 下一步可部署到稳定 HTTPS 环境、优化前端拆包，并录制作品集演示视频。
+- 下一步录制作作品集演示视频，并继续优化前端拆包与动态会话管理。
 
 ## 项目来源与许可证
 
