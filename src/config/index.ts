@@ -8,10 +8,20 @@ export const ReversoContext = 'https://www.volcengine.com/docs/6348/68918';
 export const UserAgreement = 'https://www.volcengine.com/docs/6348/128955';
 
 /**
- * @note 请求的 API Proxy Server(对应此 Demo 中包含的 Node server) 地址。
- *       动态使用当前页面的主机名，支持局域网访问
+ * @note 本地开发时 FastAPI 使用 3001 端口；生产构建由 FastAPI 同域托管，
+ *       因此默认复用当前 HTTPS origin。也可在构建时通过
+ *       REACT_APP_API_BASE_URL 显式覆盖。
  */
-export const AIGC_PROXY_HOST = `http://${window.location.hostname}:3001`;
+const configuredApiHost = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, '');
+const isLocalDevelopment =
+  ['127.0.0.1', 'localhost'].includes(window.location.hostname) &&
+  window.location.port === '4173';
+
+export const AIGC_PROXY_HOST =
+  configuredApiHost ||
+  (isLocalDevelopment
+    ? `${window.location.protocol}//${window.location.hostname}:3001`
+    : window.location.origin);
 
 export interface IScene {
   icon: string;

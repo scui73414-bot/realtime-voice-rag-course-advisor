@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: dongxiaozhi-voice-rag
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: CALLBACK_AUTH_TOKEN
+        generateValue: true
+      - key: VOLC_ACCESS_KEY
+        sync: false
+      - key: VOLC_SECRET_KEY
+        sync: false
+      - key: ARK_ENDPOINT_ID
+        sync: false
+      - key: ARK_API_KEY
+        sync: false
+      - key: RTC_APP_ID
+        sync: false
+      - key: RTC_APP_KEY
+        sync: false
+      - key: RTC_ROOM_ID
+        value: ChatRoom01
+      - key: RTC_USER_ID
+        value: Huoshan01
+      - key: RTC_TASK_ID
+        value: ChatTask01
+      - key: RTC_AGENT_USER_ID
+        value: AiAgent
+      - key: SPEECH_APP_ID
+        sync: false
+      - key: KB_COLLECTION_NAME
+        sync: false
+      - key: KB_PROJECT_NAME
+        value: default
+      - key: VOLC_ACCOUNT_ID
+        sync: false
+      - key: WELCOME_MESSAGE
+        value: 我是懂小智，你的专属课程顾问，有什么问题可以直接问我。
