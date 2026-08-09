@@ -1,0 +1,5 @@
+# Optional machine-specific paths. Copy to scripts/dev.local when the tools are
+# not available from the project's default locations or PATH.
+PYTHON_BIN=/absolute/path/to/python
+NODE_BIN=/absolute/path/to/node
+NGROK_BIN=/absolute/path/to/ngrok

@@ -1,46 +1,64 @@
-import uuid
+import json
 import time
+from typing import List
+
 import httpx
-import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Dict, Any
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from config import settings
+from services.chat_callback import build_chat_callback_response
 from services.llm_service import llm_service
+from services.rag_service import rag_service
 from services.token_build import AccessToken, PRIVILEGES
-from services.utils import Signer  # 确保 utils.py 已移动到 services 目录
-
-from fastapi.responses import JSONResponse
-
-from fastapi import Request
-from fastapi.responses import StreamingResponse  # <--- 必须导入这个
-import json
-from services.rag_service import rag_service  # <--- 新增这行
-
-# 在你的 settings.py 或 main.py 顶部
-from dotenv import load_dotenv
-
-load_dotenv()  # 必须先执行这一行，后面的 settings 才能读到值
+from services.utils import Signer
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://127.0.0.1:4173", "http://localhost:4173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+@app.get("/health")
+async def health():
+    """Local readiness check that never exposes credential values."""
+    return {
+        "status": "ok",
+        "configured": {
+            "rtc": bool(settings.RTC_APP_ID and settings.RTC_APP_KEY),
+            "speech": bool(settings.SPEECH_APP_ID),
+            "ark": bool(settings.ARK_ENDPOINT_ID and settings.ARK_API_KEY),
+            "knowledge_base": bool(
+                settings.VOLC_AK
+                and settings.VOLC_SK
+                and settings.VOLC_ACCOUNT_ID
+                and settings.KB_COLLECTION_NAME
+            ),
+            "public_callback": bool(
+                settings.SERVER_URL and settings.CALLBACK_AUTH_TOKEN
+            ),
+        },
+    }
+
+
 # --- 1. 获取场景 (前端展示用) ---
 @app.post("/getScenes")
 async def get_scenes(request: Request):
-    # 生成随机 ID
-    room_id = "ChatRoom01"
-    user_id = "Huoshan01"
+    if not settings.RTC_APP_ID or not settings.RTC_APP_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="RTC 尚未配置：请先将 .env.example 复制为 .env，并填写 RTC_APP_ID 与 RTC_APP_KEY。",
+        )
+
+    room_id = settings.RTC_ROOM_ID
+    user_id = settings.RTC_USER_ID
 
     # 签发 RTC Token
     token_builder = AccessToken(
@@ -61,7 +79,9 @@ async def get_scenes(request: Request):
                         # --- 补全的核心字段 ---
                         "id": "Custom",  # 建议改为 Custom，通常前端会根据这个 ID 做特殊处理
                         "name": "自定义助手",
-                        "botName": "AiAgent",
+                        # 必须与 StartVoiceChat 的 AgentConfig.UserId 保持一致，
+                        # 否则前端会把智能体字幕当作未知用户消息过滤掉。
+                        "botName": settings.RTC_AGENT_USER_ID,
                         "icon": "https://lf3-rtc-demo.volccdn.com/obj/rtc-aigc-assets/DoubaoAvatar.png",  # 补全图标
                         # --- 功能开关 ---
                         "isInterruptMode": True,  # 是否支持打断
@@ -75,7 +95,7 @@ async def get_scenes(request: Request):
                         "AppId": settings.RTC_APP_ID,
                         "RoomId": room_id,
                         "UserId": user_id,
-                        "Token": "0016933e1446a6de10173e1e306SQByMU4CyGJjaUidbGkKAENoYXRSb29tMDEJAEh1b3NoYW4wMQYAAABInWxpAQBInWxpAgBInWxpAwBInWxpBABInWxpBQBInWxpIADy1t0b88zOs1wU2YBbaU7L81CoTtBiu4Viw2hzb7rR/w==",
+                        "Token": token,
                     },
                     # 这里的配置主要是为了兼容前端透传，实际生效主要看 proxy
                     "VoiceChat": {},
@@ -93,23 +113,40 @@ async def get_scenes(request: Request):
 @app.post("/proxy")
 async def proxy(request: Request):
     """
-    完全硬编码的代理接口，用于测试链路是否畅通
+    将前端的 RTC 操作转换为火山引擎 OpenAPI 请求。
     """
     action = request.query_params.get("Action")
     version = request.query_params.get("Version", "2024-12-01")
+    allowed_actions = {"StartVoiceChat", "StopVoiceChat"}
+    if action not in allowed_actions:
+        raise HTTPException(status_code=400, detail="不支持的 RTC 操作")
+
+    required_values = {
+        "VOLC_ACCESS_KEY": settings.VOLC_AK,
+        "VOLC_SECRET_KEY": settings.VOLC_SK,
+        "RTC_APP_ID": settings.RTC_APP_ID,
+        "SPEECH_APP_ID": settings.SPEECH_APP_ID,
+        "SERVER_URL": settings.SERVER_URL,
+        "CALLBACK_AUTH_TOKEN": settings.CALLBACK_AUTH_TOKEN,
+    }
+    missing_values = [name for name, value in required_values.items() if not value]
+    if missing_values:
+        raise HTTPException(
+            status_code=503,
+            detail=f"RTC 服务配置不完整，缺少：{', '.join(missing_values)}",
+        )
 
     # 打印前端实际传过来的数据，方便观察
+    incoming_body = {}
     try:
         incoming_body = await request.json()
         print(f"DEBUG: 收到前端请求 {action}, Body: {incoming_body}")
-    except:
+    except ValueError:
         pass
 
-    # --- 开始硬编码数据 ---
-    # 注意：这里的 AppId, RoomId, UserId, Token 必须与你提供的 JSON 完全一致
-    target_app_id = "6933e1446a6de10173e1e306"
-    target_room_id = "ChatRoom01"
-    target_user_id = "Huoshan01"
+    target_app_id = settings.RTC_APP_ID
+    target_room_id = settings.RTC_ROOM_ID
+    target_user_id = settings.RTC_USER_ID
 
     request_body = {}
 
@@ -118,11 +155,11 @@ async def proxy(request: Request):
         request_body = {
             "AppId": target_app_id,
             "RoomId": target_room_id,
-            "TaskId": "ChatTask01",
+            "TaskId": settings.RTC_TASK_ID,
             "AgentConfig": {
                 "TargetUserId": [target_user_id],
-                "WelcomeMessage": "我是懂小智，你的专属课程顾问，有什么问题尽管问我吧，我比懂王更强",
-                "UserId": "AiAgent",
+                "WelcomeMessage": settings.WELCOME_MESSAGE,
+                "UserId": settings.RTC_AGENT_USER_ID,
                 "EnableConversationStateCallback": True, 
             },
             "Config": {
@@ -130,14 +167,17 @@ async def proxy(request: Request):
                     "Provider": "volcano",
                     "ProviderParams": {
                         "Mode": "smallmodel",
-                        "AppId": "7077298582",
+                        "AppId": settings.SPEECH_APP_ID,
                         "Cluster": "volcengine_streaming_common",
                     },
                 },
                 "TTSConfig": {
                     "Provider": "volcano",
                     "ProviderParams": {
-                        "app": {"appid": "7077298582", "cluster": "volcano_tts"},
+                        "app": {
+                            "appid": settings.SPEECH_APP_ID,
+                            "cluster": "volcano_tts",
+                        },
                         "audio": {
                             "voice_type": "BV001_streaming",
                             "speed_ratio": 1,
@@ -150,10 +190,17 @@ async def proxy(request: Request):
                     # 先用 Custom 模式测试你的回调地址
                     "Mode": "CustomLLM",
                     "Url": f"{settings.SERVER_URL}/api/chat_callback",
+                    "APIKey": settings.CALLBACK_AUTH_TOKEN,
                     "Method": "POST",
                     "ApiType": "https"
                     if str(settings.SERVER_URL).startswith("https")
                     else "http",
+                },
+                # 将用户与 AI 的实时字幕通过 RTC 二进制消息发给前端。
+                # 当前页面是非数字人场景，前端按 SubtitleMode=0 组装字幕。
+                "SubtitleConfig": {
+                    "DisableRTSSubtitle": False,
+                    "SubtitleMode": 0,
                 },
                 "InterruptMode": 0,
             },
@@ -162,7 +209,7 @@ async def proxy(request: Request):
         request_body = {
             "AppId": target_app_id,
             "RoomId": target_room_id,
-            "TaskId": "ChatTask01",
+            "TaskId": settings.RTC_TASK_ID,
         }
     else:
         # 其他 Action 直接返回前端传的内容
@@ -207,57 +254,7 @@ async def proxy(request: Request):
 
 @app.post("/api/chat_callback")
 async def chat_callback(request: Request):
-    try:
-        data = await request.json()
-    except:
-        return {"text": ""}
-
-    print(f"======================== 流式请求", data)
-
-    messages = data.get("messages", [])
-
-    # 校验逻辑 (保持不变)
-    if not messages or messages[-1].get("role") != "user":
-        print("⚠️ 忽略：非用户主动发言")
-        return {"text": ""}
-
-    # --- 定义 SSE 生成器 ---
-    async def generate_sse():
-        # 1. 调用 LLM 的流式方法
-        # 注意：这里是同步生成器还是异步取决于 SDK，Ark SDK 默认是同步 iterator，
-        # 但在 FastAPI 的 async def 中，通常可以直接遍历
-
-        rag_content = await rag_service.retrieve(messages[-1].get("content", ""))
-
-        stream_iterator = llm_service.chat_stream(messages, rag_content)
-
-        for chunk in stream_iterator:
-            if chunk:
-                # Ark SDK 的 chunk 是一个对象 (ChatCompletionChunk)
-                # 我们直接用 model_dump_json() 把它转成 JSON 字符串
-                # 这完全符合 RTC 要求的 OpenAI 兼容格式
-                chunk_json = chunk.model_dump_json()
-
-                # 2. 构造 SSE 协议格式： "data: {json数据}\n\n"
-                yield f"data: {chunk_json}\n\n"
-
-        # 3. 循环结束后，必须发送结束符 (RTC 要求的)
-        yield "data: [DONE]\n\n"
-
-    # --- 返回流式响应 ---
-    return StreamingResponse(
-        generate_sse(),
-        media_type="text/event-stream",  # <--- 必须是这个 Header
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            # 如果存在跨域问题，可以加上 Access-Control-Allow-Origin
-            "Access-Control-Allow-Origin": "*",
-        },
-    )
-
-
-from typing import List, Optional
+    return await build_chat_callback_response(request)
 
 
 # 1. 定义消息模型
@@ -267,7 +264,7 @@ class ChatMessage(BaseModel):
 
 
 class DebugRequest(BaseModel):
-    history: Optional[List[ChatMessage]] = []
+    history: List[ChatMessage] = Field(default_factory=list)
     question: str
 
 
@@ -343,16 +340,12 @@ async def debug_chat(request: DebugRequest):
     return StreamingResponse(generate_text(), media_type="text/plain")
 
 
-# ... 其他导入保持不变 ...
-from services.rag_service import rag_service  # 确保已导入 rag_service
-
-
 # --- 新增：知识库调试接口 ---
 @app.get("/debug/rag")
 async def debug_rag(query: str):
     """
     调试接口：直接返回知识库检索到的原始文本内容
-    用法：浏览器访问 http://127.0.0.1:8000/debug/rag?query=你的问题
+    用法：浏览器访问 http://127.0.0.1:3001/debug/rag?query=你的问题
     """
     if not query:
         return {"error": "请提供 query 参数"}

@@ -29,8 +29,11 @@ yarn-error.log*
 yarn.lock
 .eslintcache
 pnpm-lock.yaml
+/pnpm-workspace.yaml
 dist/
 log/
+/.runtime/
+/scripts/dev.local
 
 **/__pycache__
 **/.env

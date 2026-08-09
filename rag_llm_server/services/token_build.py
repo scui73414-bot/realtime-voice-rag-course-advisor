@@ -27,7 +27,12 @@ class ByteBuf:
     def put_tree_map_uint32(self, m):
         if not m: self.put_uint16(0); return self
         self.put_uint16(len(m))
-        for k, v in m.items(): self.put_uint16(int(k)); self.put_uint32(int(v))
+        # JavaScript enumerates integer-like object keys in ascending order.
+        # RTC's official Node token builder therefore serializes privileges as
+        # 0, 1, 2, ... regardless of insertion order. Keep the Python output
+        # byte-for-byte compatible so the server can reproduce the signature.
+        for k, v in sorted(m.items(), key=lambda item: int(item[0])):
+            self.put_uint16(int(k)); self.put_uint32(int(v))
         return self
 
 class AccessToken:

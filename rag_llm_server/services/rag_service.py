@@ -1,4 +1,3 @@
-import os
 import httpx
 from config import settings
 from services.utils import Signer
@@ -12,12 +11,10 @@ class RagService:
         self.ak = settings.VOLC_AK
         self.sk = settings.VOLC_SK
         
-        # 2. 知识库特有配置
-        # 建议后续将这些变量加入 .env 和 config.py 中，这里暂时使用 os.getenv 读取
-        # 如果 .env 中未配置，将使用默认值
-        self.collection_name = os.getenv("KB_COLLECTION_NAME", "dw_ai")  # 知识库集合名称
-        self.project_name = os.getenv("KB_PROJECT_NAME", "default")      # 项目名称
-        self.account_id = os.getenv("VOLC_ACCOUNT_ID", "kb-2580e8a6357082fb")               # 火山引擎主账号ID (必填)
+        # 2. 知识库特有配置。账号信息只能从本地 .env 读取。
+        self.collection_name = settings.KB_COLLECTION_NAME
+        self.project_name = settings.KB_PROJECT_NAME
+        self.account_id = settings.VOLC_ACCOUNT_ID
         
         # 知识库服务的固定配置
         self.host = "api-knowledgebase.mlp.cn-beijing.volces.com"
@@ -31,8 +28,20 @@ class RagService:
         :return: 整合后的上下文文本
         """
         # 基础校验
-        if not self.ak or not self.sk or not self.account_id:
-            print(f"⚠️ [RagService] 配置缺失: 请检查 VOLC_AK, VOLC_SK, VOLC_ACCOUNT_ID(当前: {self.account_id})")
+        if not all(
+            [
+                self.ak,
+                self.sk,
+                self.account_id,
+                self.collection_name,
+                self.project_name,
+            ]
+        ):
+            print(
+                "⚠️ [RagService] 配置缺失: 请检查 VOLC_ACCESS_KEY、"
+                "VOLC_SECRET_KEY、VOLC_ACCOUNT_ID、KB_COLLECTION_NAME 和 "
+                "KB_PROJECT_NAME"
+            )
             return ""
 
         path = "/api/knowledge/collection/search_knowledge"
@@ -42,15 +51,24 @@ class RagService:
             "project": self.project_name,
             "name": self.collection_name,
             "query": query,
-            "limit": 1, # 获取相关度最高的前3条
+            # 取前三个相关切片，让模型既有足够上下文，也避免实时语音延迟过高。
+            "limit": 3,
             "pre_processing": {
                 "need_instruction": True,
+                "rewrite": False,
                 "return_token_usage": True,
-                "messages": [{"role": "user", "content": query}]
+                "messages": [
+                    {"role": "system", "content": ""},
+                    {"role": "user", "content": query},
+                ],
             },
             "post_processing": {
-                "get_attachment_link": True
-            }
+                "get_attachment_link": True,
+                "rerank_only_chunk": False,
+                "rerank_switch": False,
+                "chunk_group": True,
+                "chunk_diffusion_count": 0,
+            },
         }
 
         # 4. 构造 Header
@@ -82,7 +100,7 @@ class RagService:
             })
             
             # 6. 发送异步请求
-            url = f"http://{self.host}{path}"
+            url = f"https://{self.host}{path}"
             
             async with httpx.AsyncClient() as client:
                 # request_data['headers'] 已经被 signer 修改，包含了 Authorization 字段
@@ -118,8 +136,12 @@ class RagService:
             # 使用双换行符分隔不同的知识块，方便 LLM 区分
             context_text = "\n\n".join(contents)
             
-            print(f"✅ [RagService] 成功提取 {len(contents)} 条知识内容")
-            print(f"【传给LLM的,上下文内容】:\n{context_text}")
+            # 实时回调不应输出整段知识库内容：大量同步终端 I/O
+            # 会拖慢 SSE 首包，同时让业务资料进入运行日志。
+            print(
+                f"✅ [RagService] 成功提取 {len(contents)} 条知识内容"
+                f"，共 {len(context_text)} 字符"
+            )
             return context_text
 
 

@@ -4,13 +4,21 @@ from config import settings
 
 class LLMService:
     def __init__(self):
-        api_key = settings.ARK_API_KEY 
-        self.client = Ark(
-            base_url="https://ark.cn-beijing.volces.com/api/v3",    
-            api_key=api_key, 
-            timeout=1800, 
+        self.client = None
 
-        )
+    def _get_client(self):
+        """Create the Ark client only when a model request is actually made."""
+        if not settings.ARK_API_KEY:
+            return None
+
+        if self.client is None:
+            self.client = Ark(
+                base_url="https://ark.cn-beijing.volces.com/api/v3",
+                api_key=settings.ARK_API_KEY,
+                timeout=1800,
+            )
+
+        return self.client
 
     def chat_stream(self, history_messages: list, rag_context: str = ""):
         """
@@ -18,30 +26,29 @@ class LLMService:
         :param history_messages: 对话历史
         :param rag_context: 从 rag_service 检索出来的背景知识
         """
-        if not self.client:
-            yield "服务配置错误"
+        client = self._get_client()
+        if client is None:
+            print("❌ LLM 配置缺失: 请在 .env 中设置 ARK_API_KEY")
+            yield None
             return
 
-        # --- 1. 定义极其严格的系统提示词 ---
-        # 使用三引号，保持代码与输出格式一致
+        # --- 1. 定义课程顾问的系统提示词 ---
         system_content = """
         # 角色
-        你是【懂小智】，AI培训机构“懂王”的金牌顾问。你的老板是懂王老师，你的说话风格：**硬核、清醒、毒舌但热血**。
+        你是【懂小智】，AI 课程顾问。你的表达专业、简洁、有行动感，适合实时语音对话。
 
         # 核心任务
-        1. 依据【参考知识库】回答咨询。
-        2. 知识库有内容：直接复用库里那些“带劲”的话，不要美化成废话。
-        3. 知识库没内容：执行【拦截话术】。
+        1. 只依据【参考知识库】回答课程、学习路线和项目相关问题。
+        2. 优先给出直接结论，再补充一至三个关键依据。
+        3. 知识库没有覆盖时，明确说明资料不足，并建议联系人工老师确认。
 
         # 行为准则
-        - **不废话**：用短句，多用祈使句。不要说“理解您的意思”，直接给答案。
-        - **反幻觉**：严禁编造价格和课程。库里没有，就说：“抱歉，这块信息库还没更新，留个联系方式，我让老师直接跟你对线。”
-        - **价值观**：认同“工资高才是硬道理”、“技术是狗屎，工资是真理”。
-
-        # 常用金句（优先从库里取）
-        - “你只是老了，不是死了。”
-        - “学技术不是目的，高工资才是硬道理。”
-        - “我命由我不由天。”
+        - 默认使用中文，控制在 2 至 5 句，避免长篇复述知识库。
+        - 不编造价格、优惠、开班日期、合同、退款规则或课程内容。
+        - 不承诺就业、薪资、面试结果或个人职业结果。
+        - 不索要密码、API Key、Secret Key 等敏感凭证。
+        - 不使用侮辱、贬低、施压或过度营销的话术。
+        - 用户问题超出资料范围时，不把推测包装成确定事实。
                 """.strip()
 
         # --- 2. 构造最终发送给模型的消息序列 ---
@@ -65,10 +72,13 @@ class LLMService:
         try:
             print(f"🚀 发起流式调用 (Endpoint: {settings.ARK_ENDPOINT_ID})")
             
-            stream = self.client.chat.completions.create(
+            stream = client.chat.completions.create(
                 model=settings.ARK_ENDPOINT_ID,
                 messages=messages,
                 temperature=0.3, # 降低随机性，确保回答更严谨地贴合 RAG
+                # 实时语音对首包延迟非常敏感；课程问答不需要
+                # 长链路推理，因此显式关闭深度思考。
+                thinking={"type": "disabled"},
                 stream=True,
                 stream_options={"include_usage": True},
             )

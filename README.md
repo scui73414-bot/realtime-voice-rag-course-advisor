@@ -1,105 +1,225 @@
-# 交互式AIGC场景 AIGC Demo
+# 懂小智：实时语音 AI 课程顾问
 
-此 Demo 为简化版本, 如您有 1.5.x 版本 UI 的诉求, 可切换至 1.5.1 分支。
-跑通阶段时, 无须关心代码实现，仅需按需完成 `Server/scenes/*.json` 的场景信息填充即可。
+一个可实时语音对话的 RAG 课程顾问项目。用户在浏览器中说话后，系统通过 RTC 传输音频、ASR 识别问题、课程知识库检索资料、方舟大模型生成回答，再由 TTS 播放语音并同步显示字幕。
 
-## 简介
-- 在 AIGC 对话场景下，火山引擎 AIGC-RTC Server 云端服务，通过整合 RTC 音视频流处理，ASR 语音识别，大模型接口调用集成，以及 TTS 语音生成等能力，提供基于流式语音的端到端AIGC能力链路。
-- 用户只需调用基于标准的 OpenAPI 接口即可配置所需的 ASR、LLM、TTS 类型和参数。火山引擎云端计算服务负责边缘用户接入、云端资源调度、音视频流压缩、文本与语音转换处理以及数据订阅传输等环节。简化开发流程，让开发者更专注在对大模型核心能力的训练及调试，从而快速推进AIGC产品应用创新。     
-- 同时火山引擎 RTC拥有成熟的音频 3A 处理、视频处理等技术以及大规模音视频聊天能力，可支持 AIGC 产品更便捷的支持多模态交互、多人互动等场景能力，保持交互的自然性和高效性。 
+本项目用于学习和作品集展示，重点是完整串联实时音频、知识检索、大模型与可观测后端，而不是只调用一次聊天接口。
 
-## 【必看】环境准备
-**Node 版本: 16.0+**
+## 已实现能力
 
-### 1. 运行环境
-需要准备两个 Terminal，分别启动服务端和前端页面。
+- 浏览器麦克风采集与 RTC 房间通信
+- ASR 实时语音识别与用户字幕
+- 火山方舟大模型流式生成
+- 火山知识库语义检索与 RAG 回答约束
+- CustomLLM HTTPS 流式回调
+- TTS 语音合成与 AI 实时字幕
+- 回调 Bearer Token 鉴权与公网接口隔离
+- Swagger 调试接口、健康检查和错误日志
+- 知识库外问题降级、动态信息转人工、禁止就业承诺
 
-### 2. 服务开通
-开通 ASR、TTS、LLM、RTC 等服务，可参考 [开通服务](https://www.volcengine.com/docs/6348/1315561?s=g) 进行相关服务的授权与开通。
+## 系统架构
 
-### 3. 场景配置
-`Server/scenes/*.json`
-
-您可以自定义具体场景, 并按需根据模版填充 `SceneConfig`、`AccountConfig`、`RTCConfig`、`VoiceChat` 中需要的参数。
-
-Demo 中以 `Custom` 场景为例，您可以自行新增场景。
-
-注意：
-- `SceneConfig`：场景的信息，例如名称、头像等。
-- `AccountConfig`：场景下的账号信息，https://console.volcengine.com/iam/keymanage/ 获取 AK/SK。
-- `RTCConfig`：场景下的 RTC 配置。
-    - AppId、AppKey 可从 https://console.volcengine.com/rtc/aigc/listRTC 中获取。
-    - RoomId、UserId 可自定义也可不填，交由服务端生成。
-- `VoiceChat`: 场景下的 AIGC 配置。
-    - 可参考 https://www.volcengine.com/docs/6348/1558163 中参数描述，完整填写参数内容。
-    - 可通过 [快速跑通 Demo](https://console.volcengine.com/rtc/aigc/run?s=g) 快速获取参数, 跑通后点击右上角 `接入 API` 按钮复制相关代码贴到 JSON 配置文件中即可。
-## 快速开始
-请注意，服务端和 Web 端都需要启动, 启动步骤如下:
-### 服务端
-进到项目根目录
-#### 安装依赖
-```shell
-cd Server
-yarn
-```
-#### 运行项目
-```shell
-yarn dev
+```mermaid
+flowchart LR
+    U["用户浏览器"] -->|"麦克风音频"| RTC["火山引擎 RTC"]
+    RTC --> ASR["ASR 语音识别"]
+    ASR -->|"用户问题"| CB["公网回调服务 :3002"]
+    CB --> RAG["课程知识库检索"]
+    RAG --> LLM["火山方舟大模型"]
+    LLM -->|"流式文本"| RTC
+    RTC --> TTS["TTS 语音合成"]
+    TTS -->|"AI 音频"| U
+    RTC -->|"用户与 AI 字幕"| U
+    WEB["本地业务服务 :3001"] -->|"Token、场景与任务控制"| RTC
+    U --> WEB
 ```
 
-### 前端页面
-进到项目根目录
-#### 安装依赖
-```shell
-yarn
+### 设计说明
+
+- `3001` 是本地业务与调试服务，包含 RTC Token、任务控制和 Swagger，不暴露到公网。
+- `3002` 只提供健康检查和带鉴权的 CustomLLM 回调，由 ngrok 暴露给 RTC 云服务。
+- `.env` 保存真实凭证并被 Git 忽略；仓库只提交无密钥的 `.env.example`。
+- 实时对话默认关闭深度思考，优先保证首包速度和交互自然度。
+
+## 技术栈
+
+- 前端：React、TypeScript、Redux Toolkit、Volcengine RTC Web SDK
+- 后端：Python、FastAPI、Uvicorn、HTTPX
+- AI：火山方舟大模型、火山知识库 RAG
+- 语音：火山引擎 RTC、ASR、TTS
+- 开发工具：Swagger UI、ngrok、Git
+
+## 项目结构
+
+```text
+.
+├── src/                         # React 实时语音交互页面
+├── rag_llm_server/
+│   ├── main.py                  # 本地业务服务、RTC OpenAPI 代理和调试接口
+│   ├── public_callback.py       # 最小化公网回调应用
+│   ├── config.py                # 环境变量配置
+│   ├── services/
+│   │   ├── chat_callback.py     # 回调鉴权与 OpenAI 兼容 SSE
+│   │   ├── llm_service.py       # 方舟流式大模型调用
+│   │   ├── rag_service.py       # 知识库检索
+│   │   └── token_build.py       # RTC Token 生成
+│   └── knowledge/               # 演示课程资料
+└── docs/
+    └── test-results.md          # 端到端验收记录
 ```
-#### 运行项目
-```shell
-yarn dev
+
+## 本地运行
+
+### 推荐：一键启动
+
+本机完成依赖、`.env` 和 ngrok 认证配置后，在项目根目录运行：
+
+```bash
+scripts/dev.sh start
 ```
 
-### 常见问题
-| 问题 | 解决方案 |
-| :-- | :-- |
-| 如何使用第三方模型、Coze Bot | 模型相关配置代码对应目录 `src/config/scenes/` 下json 文件，填写对应官方模型/ Coze/ 第三方模型的参数后，可点击页面上的 "修改 AI 人设" 进行切换。 |
-| **启动智能体之后, 对话无反馈，或者一直停留在 "AI 准备中, 请稍侯"；在启用数字人的情况下，一直停留在“数字人准备中，请稍候”** | <li>可能因为控制台中相关权限没有正常授予，请参考[流程](https://www.volcengine.com/docs/6348/1315561?s=g)再次确认下是否完成相关操作。此问题的可能性较大，建议仔细对照是否已经将相应的权限开通。</li><li>参数传递可能有问题, 例如参数大小写、类型等问题，请再次确认下这类型问题是否存在。</li><li>相关资源可能未开通或者用量不足/欠费，请再次确认。</li><li>**请检查当前使用的模型 ID / 数字人 AppId / Token 等内容都是正确且可用的。**</li><li>数字人服务有并发限制，当达到并发限制时，同样会表现为一直停留在“数字人准备中”状态</li> |
-| **浏览器报了 `Uncaught (in promise) r: token_error` 错误** | 请检查您填在项目中的 RTC Token 是否合法，检测用于生成 Token 的 UserId、RoomId 以及 Token 本身是否与项目中填写的一致；或者 Token 可能过期, 可尝试重新生成下。 |
-| **[StartVoiceChat]Failed(Reason: The task has been started. Please do not call the startup task interface repeatedly.)** 报错 | 如果设置的 RoomId、UserId 为固定值，重复调用 startAgent 会导致出错，只需先调用 stopAgent 后再重新 startAgent 即可。 |
-| 为什么麦克风、摄像头开启失败？浏览器报了`TypeError: Cannot read properties of undefined (reading 'getUserMedia')` | 检查当前页面是否为[安全上下文](https://developer.mozilla.org/zh-CN/docs/Web/Security/Secure_Contexts)（简单来说，检查当前页面是否为 `localhost` 或者 是否为 https 协议）。浏览器[限制](https://developer.mozilla.org/zh-CN/docs/Web/Security/Secure_Contexts/features_restricted_to_secure_contexts) `getUserMedia` 只能在安全上下文中使用。 |
-| 为什么我的麦克风正常、摄像头也正常，但是设备没有正常工作? | 可能是设备权限未授予，详情可参考 [Web 排查设备权限获取失败问题](https://www.volcengine.com/docs/6348/1356355?s=g)。 |
-| 接口调用时, 返回 "Invalid 'Authorization' header, Pls check your authorization header" 错误 | `Server/app.js` 中的 AK/SK 不正确 |
-| 什么是 RTC | **R**eal **T**ime **C**ommunication, RTC 的概念可参考[官网文档](https://www.volcengine.com/docs/6348/66812?s=g)。 |
-| 不清楚什么是主账号，什么是子账号 | 可以参考[官方概念](https://www.volcengine.com/docs/6257/64963?hyperlink_open_type=lark.open_in_browser&s=g) 。|
-| 我有自己的服务端了, 我应该怎么让前端调用我的服务端呢 | 修改 `src/config/index.ts` 中的 `AIGC_PROXY_HOST` 请求域名和接口并在 `src/app/api.ts` 中修改接口参数配置 `APIS_CONFIG` |
+脚本会自动启动 ngrok、两个 FastAPI 服务和前端，并将 ngrok 最新 HTTPS 地址安全更新到 `.env`。该命令会留在前台统一托管四个进程，按 `Ctrl-C` 即可全部停止。
 
-如果有上述以外的问题，欢迎联系我们反馈。
+其他命令：
 
-### 相关文档
-- [场景介绍](https://www.volcengine.com/docs/6348/1310537?s=g)
-- [Demo 体验](https://www.volcengine.com/docs/6348/1310559?s=g)
-- [场景搭建方案](https://www.volcengine.com/docs/6348/1310560?s=g)
+```bash
+scripts/dev.sh status   # 查看四个进程状态
+scripts/dev.sh stop     # 从另一个终端停止全部服务
+scripts/dev.sh restart  # 重新启动全部服务
+```
 
-## 更新日志
+`scripts/dev.local` 用于保存本机 Python、Node.js 和 ngrok 可执行文件路径，已被 Git 忽略；可参考 `scripts/dev.local.example`。
 
-### OpenAPI 更新
-参考 [OpenAPI 更新](https://www.volcengine.com/docs/6348/1544162) 中与 实时对话式 AI 相关的更新内容。
+下面保留分步启动方式，便于学习每个进程的职责和单独排障。
 
-### Demo 更新
+### 1. 前置条件
 
-#### [1.6.0]
-- 2025-09-30
-    - 更新数字人场景相关配置
-- 2025-07-08
-    - 更新 RTC Web SDK 版本至 4.66.20
-- 2025-06-26
-    - 修复进房有问题的 BUG
-- 2025-06-23
-    - 简化 Demo 使用, 配置归一化。
-    - 删除无用组件。
-    - 追加服务端 README。
-- 2025-06-18
-    - 更新 RTC Web SDK 版本至 4.66.16
-    - 更新 UI 和参数配置方式
-    - 更新 Readme 文档
-    - 追加 Node 服务的参数检测能力
-    - 追加 Node 服务的 Token 生成能力
+- Node.js 16+
+- Python 3.10+
+- 火山引擎 RTC、语音技术、方舟模型和知识库服务
+- ngrok 或其他可访问本机的 HTTPS 隧道
+
+涉及账号授权、资源开通和计费确认的步骤需要在火山引擎控制台手动完成。
+
+### 2. 安装依赖
+
+```bash
+npm install
+
+cd rag_llm_server
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 3. 配置环境变量
+
+```bash
+cd rag_llm_server
+cp .env.example .env
+```
+
+根据自己的火山引擎资源填写 `.env`。不要将真实的 `.env`、API Key、Access Key 或 Secret Key 提交到 Git。
+
+关键配置分为五组：
+
+- `VOLC_ACCESS_KEY`、`VOLC_SECRET_KEY`：RTC OpenAPI 与知识库请求签名
+- `ARK_ENDPOINT_ID`、`ARK_API_KEY`：方舟在线推理端点
+- `RTC_*`：RTC 应用、房间、用户、任务和智能体信息
+- `SPEECH_APP_ID`：ASR 与 TTS 应用
+- `KB_*`、`VOLC_ACCOUNT_ID`：知识库与账号信息
+
+### 4. 启动公网隧道
+
+```bash
+ngrok http 3002
+```
+
+将生成的 HTTPS 地址写入 `.env` 的 `SERVER_URL`，例如：
+
+```dotenv
+SERVER_URL=https://example.ngrok-free.app
+```
+
+### 5. 启动两个 FastAPI 服务
+
+终端一：
+
+```bash
+cd rag_llm_server
+source .venv/bin/activate
+uvicorn main:app --host 127.0.0.1 --port 3001
+```
+
+终端二：
+
+```bash
+cd rag_llm_server
+source .venv/bin/activate
+uvicorn public_callback:app --host 127.0.0.1 --port 3002
+```
+
+### 6. 启动前端
+
+```bash
+PORT=4173 npm start
+```
+
+访问：
+
+- 语音页面：<http://127.0.0.1:4173/>
+- Swagger：<http://127.0.0.1:3001/docs>
+- 健康检查：<http://127.0.0.1:3001/health>
+
+## 调试接口
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| `GET` | `/health` | 检查 RTC、语音、模型、知识库和回调配置 |
+| `POST` | `/getScenes` | 为前端生成场景配置和 RTC Token |
+| `POST` | `/proxy` | 启动或停止 RTC 智能体任务 |
+| `POST` | `/debug/chat` | 独立调试 RAG 与大模型流式回答 |
+| `GET` | `/debug/rag` | 查看问题召回的知识片段 |
+| `POST` | `/api/chat_callback` | RTC CustomLLM 流式回调 |
+
+## 验收结果
+
+当前端到端测试已经验证：
+
+- 用户语音能够被识别并显示字幕；
+- AI 能在 8 秒内返回语音并同步显示文字；
+- 课程问题会使用知识库中的资料回答；
+- 价格和开班日期等动态信息不会被编造；
+- 不承诺就业、薪资或面试结果；
+- 天气、股票等知识库外问题会被明确拒绝。
+
+完整记录见 [`docs/test-results.md`](docs/test-results.md)。
+
+作品集录制脚本、简历描述和面试回答提纲见 [`docs/demo-and-resume.md`](docs/demo-and-resume.md)。
+
+### 自动化回归测试
+
+```bash
+cd rag_llm_server
+python -m unittest discover -s tests -v
+```
+
+当前 6 条测试会防止 RTC 权限键序列化、场景机器人身份、ngrok 地址自动更新、代理操作越权和 CORS 范围等问题再次出现。
+
+## 关键问题复盘
+
+1. **RTC Token 报 `token_error`**：Python 权限映射的序列化顺序与官方实现不同，导致签名不一致；改为按数字权限键排序后与官方 Token 一致。
+2. **能识别语音但没有回复**：公网隧道进程失效，RTC 无法访问本地 CustomLLM 回调；拆分最小公网回调服务并增加健康检查。
+3. **回复延迟约 30 秒**：实时课程咨询不需要长推理；关闭模型深度思考并减少同步日志后，回复降低到 8 秒以内。
+4. **有 AI 语音但没有 AI 字幕**：前端 `botName` 与 RTC 智能体用户 ID 不一致，字幕被当成未知用户消息过滤；统一身份配置并开启 RTC 字幕回调。
+
+## 当前限制与下一步
+
+- ngrok 免费地址可能变化，正式部署应使用稳定 HTTPS 域名。
+- 当前使用固定房间和任务 ID，适合单人演示；多人并发需要动态会话管理。
+- AI 回复可能按语音句号拆成多个气泡，后续可按同一轮对话合并。
+- 当前生产构建的主 JavaScript gzip 后约 2.74 MB，可继续通过懒加载和拆包优化首屏体积。
+- 下一步可部署到稳定 HTTPS 环境、优化前端拆包，并录制作品集演示视频。
+
+## 项目来源与许可证
+
+前端基于火山引擎实时对话式 AI Demo 二次开发，并新增 FastAPI、RAG、自定义 LLM 回调、安全隔离、测试与课程顾问业务逻辑。原始项目及本仓库代码遵循 BSD-3-Clause 许可证。
