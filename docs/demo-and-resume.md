@@ -24,7 +24,7 @@
 
 ### 0:45–1:50 实时功能演示
 
-画面：打开 `http://127.0.0.1:4173/`，点击“通话”。
+画面：打开线上作品 <https://dongxiaozhi-voice-rag.onrender.com>，点击“通话”并允许麦克风。录制前先访问 `/health` 预热免费实例。
 
 依次说出：
 
@@ -43,7 +43,7 @@
 
 讲解词：
 
-> 后端使用 FastAPI，提供健康检查、RAG 调试、大模型调试和 RTC 任务控制接口。真实凭证只存放在被 Git 忽略的 `.env` 中，公网回调使用 Bearer Token 鉴权。我还添加了端到端验收记录和回归测试，防止 RTC Token 序列化与智能体字幕身份问题再次出现。
+> 后端使用 FastAPI，提供健康检查、RAG 调试、大模型调试和 RTC 任务控制接口。真实凭证通过本地 `.env` 或 Render 环境变量注入，公网回调使用 Bearer Token 鉴权；生产环境会关闭 Swagger 和调试接口。我还加入 GitHub Actions、Docker 与端到端验收记录，防止 RTC Token 序列化与智能体字幕身份问题再次出现。
 
 画面：展示 Swagger、`.env.example`、`docs/test-results.md` 和自动化测试命令，注意不要展示真实 `.env`。
 
@@ -61,14 +61,15 @@
 
 ### 技术栈
 
-Python、FastAPI、React、TypeScript、Redux Toolkit、火山引擎 RTC/ASR/TTS、火山方舟大模型、知识库 RAG、HTTP SSE、ngrok、Git
+Python、FastAPI、React、TypeScript、Redux Toolkit、火山引擎 RTC/ASR/TTS、火山方舟大模型、知识库 RAG、HTTP SSE、Docker、Render、GitHub Actions
 
 ### 推荐版简历要点
 
 - 设计并实现实时语音 AI 课程顾问，串联浏览器麦克风、RTC、ASR、知识库 RAG、方舟大模型、TTS 和实时字幕，完成端到端语音问答闭环。
 - 使用 FastAPI 构建 RTC 任务控制、知识库检索、模型调试和 OpenAI 兼容 SSE 回调接口；拆分最小公网回调服务，并通过 Bearer Token 与 `.env` 完成接口鉴权和凭证隔离。
 - 针对实时场景关闭深度思考并减少同步日志，将语音回复由约 30 秒优化到实测 8 秒以内。
-- 按链路定位并修复 RTC Token 签名、回调隧道、字幕身份过滤等问题；完成 4 类端到端 RAG 验收和 2 项自动化回归测试。
+- 按链路定位并修复 RTC Token 签名、回调隧道、字幕身份过滤等问题；完成 4 类端到端 RAG 验收和 10 项自动化回归测试。
+- 使用 Docker、Render Blueprint 和 GitHub Actions 完成稳定 HTTPS 部署，实现 CI 通过后自动发布，并在生产环境隔离 Swagger 与调试接口。
 
 ## 面试高频问题回答提纲
 
@@ -97,5 +98,5 @@ AI 已能播放语音但页面没有 AI 字幕。通过浏览器日志确认 RTC
 - 录制前先运行健康检查，确认所有配置项为 `true`。
 - 不展示真实 `.env`、API Key、Access Key、Secret Key 或回调鉴权 Token。
 - 演示问题提前固定，避免临时问题超出知识库资料。
-- 若免费 ngrok 地址变化，先更新 `SERVER_URL` 并重启两个 FastAPI 服务。
+- 线上演示使用稳定 Render 域名；ngrok 只用于本地开发。
 - 演示结束后挂断 RTC 通话，避免继续产生云服务用量。

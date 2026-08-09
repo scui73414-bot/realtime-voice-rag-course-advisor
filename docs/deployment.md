@@ -14,6 +14,11 @@
 - 自动生成 `CALLBACK_AUTH_TOKEN`；
 - 自动读取 Render 提供的 `RENDER_EXTERNAL_URL` 作为 RTC 回调地址。
 
+当前已部署的作品集环境：
+
+- 项目首页：<https://dongxiaozhi-voice-rag.onrender.com>
+- 健康检查：<https://dongxiaozhi-voice-rag.onrender.com/health>
+
 在 Render 创建 Blueprint 后，只需要在控制台填写标记为 `sync: false` 的
 火山引擎配置。不要将真实值写入 `render.yaml` 或 GitHub。
 
@@ -31,6 +36,16 @@
 2. 项目首页可以正常加载；
 3. 浏览器允许麦克风后能够加入 RTC 房间；
 4. 用户字幕、RAG 回答、AI 语音和 AI 字幕均正常。
+
+## 生产验收记录
+
+2026-08-09 已完成首次生产验收：
+
+- `/health` 返回 HTTP 200，RTC、语音、方舟模型、知识库和公网回调五项配置均为 `true`；
+- 浏览器允许麦克风后成功加入 `ChatRoom01`；
+- `StartVoiceChat` 返回 `Result: ok`，CustomLLM 回调返回 HTTP 200；
+- 每轮问题从知识库提取 2 条内容并进入方舟流式模型调用；
+- 页面同时显示用户字幕、AI 字幕并播放 AI 语音。
 
 ## 免费实例限制
 

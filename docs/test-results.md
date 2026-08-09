@@ -4,8 +4,9 @@
 
 ## 当前环境
 
-- 前端：本地 React 页面
-- 业务服务：FastAPI
+- 本地开发：React 页面、FastAPI 业务服务与最小公网回调服务
+- 生产环境：Render 免费 Web Service，React 与 FastAPI 同域 Docker 部署
+- 线上地址：<https://dongxiaozhi-voice-rag.onrender.com>
 - 实时链路：火山引擎 RTC、ASR、TTS
 - 生成链路：课程知识库 RAG、火山方舟大模型、自定义 LLM 回调
 
@@ -27,6 +28,8 @@
 | SEC-02 | 本地 CORS 范围 | 只允许 `127.0.0.1:4173` 与 `localhost:4173` | 本地来源被允许，未知来源无允许头 | 通过 |
 | DEV-01 | 一键启动开发环境 | 自动启动 ngrok、回调、业务后端和前端，且四项健康检查通过 | 四个进程运行正常，公网回调与前端编译检查通过；重新拨号后的语音、文字回复正常 | 通过 |
 | BUILD-01 | 前端生产构建 | 能生成可部署静态资源 | 优化构建成功；主 JavaScript gzip 后约 2.74 MB | 通过 |
+| DEPLOY-01 | Render 生产健康检查 | 五类服务配置齐全且不泄露凭证 | HTTP 200；RTC、语音、方舟、知识库与公网回调均为 `true` | 通过 |
+| DEPLOY-02 | 线上 RTC 与 RAG 闭环 | 入房、启动智能体、回调、检索与流式生成均成功 | `StartVoiceChat` 成功；回调 HTTP 200；每轮检索 2 条知识内容；语音与双向字幕正常 | 通过 |
 
 ## 已发现的体验问题
 
