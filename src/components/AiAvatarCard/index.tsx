@@ -20,7 +20,7 @@ const THRESHOLD_VOLUME = 18;
 function AiAvatarCard(props: IAiAvatarCardProps) {
   const { showStatus, showUserTag, className } = props;
   const room = useSelector((state: RootState) => state.room);
-  const { icon } = useScene();
+  const { icon, name } = useScene();
   const { scene, isAITalking, isFullScreen } = room;
   const volume = room.localUser.audioPropertiesInfo?.linearVolume || 0;
   const { isAudioPublished } = useDeviceState();
@@ -44,7 +44,7 @@ function AiAvatarCard(props: IAiAvatarCardProps) {
           ) : null
         ) : null}
       </div>
-      {showUserTag ? <UserTag name={scene} /> : null}
+      {showUserTag ? <UserTag name={name || scene} /> : null}
     </div>
   );
 }

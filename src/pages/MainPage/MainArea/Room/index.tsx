@@ -20,13 +20,13 @@ import { useScene } from '@/lib/useCommon';
 function Room() {
   const room = useSelector((state: RootState) => state.room);
   const { isShowSubtitle, scene, isFullScreen } = room;
-  const { isAvatarScene } = useScene();
+  const { isAvatarScene, name } = useScene();
   return (
     <div className={`${style.wrapper} ${isMobile() ? style.mobile : ''}`}>
       {isMobile() ? <div className={style.mobilePlayer} id="mobile-local-player" /> : null}
       {isMobile() ? <MobileToolBar /> : null}
       {isShowSubtitle && !isMobile() ? (
-        <UserTag name={scene} className={style.subTitleUserTag} />
+        <UserTag name={name || scene} className={style.subTitleUserTag} />
       ) : null}
       {(isFullScreen || isAvatarScene) && !isMobile() ? (
         <FullScreenCard />

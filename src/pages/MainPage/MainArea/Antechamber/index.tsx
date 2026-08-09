@@ -32,7 +32,7 @@ function Antechamber() {
       <AIChangeCard />
       <InvokeButton onClick={handleJoinRoom} loading={joining} className={style['invoke-btn']} />
       {isMobile() ? null : (
-        <div className={style.description}>Powered by 豆包大模型和火山引擎视频云 RTC</div>
+        <div className={style.description}>RAG 知识库 · 豆包大模型 · 火山引擎 RTC</div>
       )}
     </div>
   );

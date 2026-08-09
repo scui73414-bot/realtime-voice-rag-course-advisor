@@ -56,6 +56,13 @@ class SceneConfigurationTests(unittest.TestCase):
         scene = response.json()["Result"]["scenes"][0]["scene"]
         self.assertEqual(scene["botName"], "TestAgent")
 
+    def test_scene_uses_portfolio_display_name(self):
+        response = TestClient(app).post("/getScenes", json={})
+
+        self.assertEqual(response.status_code, 200)
+        scene = response.json()["Result"]["scenes"][0]["scene"]
+        self.assertEqual(scene["name"], "懂小智课程顾问")
+
 
 class LocalApiSecurityTests(unittest.TestCase):
     def test_proxy_rejects_unsupported_rtc_action(self):

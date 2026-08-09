@@ -68,7 +68,7 @@ Python、FastAPI、React、TypeScript、Redux Toolkit、火山引擎 RTC/ASR/TTS
 - 设计并实现实时语音 AI 课程顾问，串联浏览器麦克风、RTC、ASR、知识库 RAG、方舟大模型、TTS 和实时字幕，完成端到端语音问答闭环。
 - 使用 FastAPI 构建 RTC 任务控制、知识库检索、模型调试和 OpenAI 兼容 SSE 回调接口；拆分最小公网回调服务，并通过 Bearer Token 与 `.env` 完成接口鉴权和凭证隔离。
 - 针对实时场景关闭深度思考并减少同步日志，将语音回复由约 30 秒优化到实测 8 秒以内。
-- 按链路定位并修复 RTC Token 签名、回调隧道、字幕身份过滤等问题；完成 4 类端到端 RAG 验收和 10 项自动化回归测试。
+- 按链路定位并修复 RTC Token 签名、回调隧道、字幕身份过滤等问题；完成 4 类端到端 RAG 验收和 11 项自动化回归测试。
 - 使用 Docker、Render Blueprint 和 GitHub Actions 完成稳定 HTTPS 部署，实现 CI 通过后自动发布，并在生产环境隔离 Swagger 与调试接口。
 
 ## 面试高频问题回答提纲

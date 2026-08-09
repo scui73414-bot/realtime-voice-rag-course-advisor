@@ -3,16 +3,15 @@
  * SPDX-license-identifier: BSD-3-Clause
  */
 
-import { Button, Divider, Popover } from '@arco-design/web-react';
+import { Button, Popover } from '@arco-design/web-react';
 import { IconMenu } from '@arco-design/web-react/icon';
 import NetworkIndicator from '@/components/NetworkIndicator';
 import { useIsMobile } from '@/utils/utils';
-import Logo from '@/assets/img/Logo.svg';
 import styles from './index.module.less';
 
-const Disclaimer = 'https://www.volcengine.com/docs/6348/68916';
-const ReversoContext = 'https://www.volcengine.com/docs/6348/68918';
-const UserAgreement = 'https://www.volcengine.com/docs/6348/128955';
+const Repository = 'https://github.com/scui73414-bot/realtime-voice-rag-course-advisor';
+const DeploymentGuide = `${Repository}/blob/main/docs/deployment.md`;
+const TestResults = `${Repository}/blob/main/docs/test-results.md`;
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -21,19 +20,20 @@ interface HeaderProps {
 
 function Header(props: HeaderProps) {
   const { children, hide } = props;
+  const isMobile = useIsMobile();
 
   const MenuProps = [
     {
-      name: '免责声明',
-      url: Disclaimer,
+      name: 'GitHub 源码',
+      url: Repository,
     },
     {
-      name: '隐私政策',
-      url: ReversoContext,
+      name: '部署说明',
+      url: DeploymentGuide,
     },
     {
-      name: '用户协议',
-      url: UserAgreement,
+      name: '验收记录',
+      url: TestResults,
     },
   ];
 
@@ -45,7 +45,7 @@ function Header(props: HeaderProps) {
       }}
     >
       <div className={styles['header-logo']}>
-        {useIsMobile() ? null : (
+        {isMobile ? null : (
           <Popover
             content={
               <div className={styles['menu-wrapper']}>
@@ -66,32 +66,27 @@ function Header(props: HeaderProps) {
             <IconMenu className={styles['header-setting-btn']} />
           </Popover>
         )}
-        <img src={Logo} alt="Logo" />
-        <Divider type="vertical" />
-        <span className={styles['header-logo-text']}>实时对话式 AI 体验馆</span>
+        <div className={styles['brand-mark']} aria-hidden="true">懂</div>
+        <div className={styles['brand-copy']}>
+          <span className={styles['brand-name']}>懂小智</span>
+          <span className={styles['brand-subtitle']}>实时语音 AI 课程顾问</span>
+        </div>
         <NetworkIndicator />
       </div>
       {children}
-      {useIsMobile() ? null : (
+      {isMobile ? null : (
         <div className={styles['header-right']}>
           <div
             className={styles['header-right-text']}
-            onClick={() =>
-              window.open('https://www.volcengine.com/product/veRTC/ConversationalAI', '_blank')
-            }
+            onClick={() => window.open(Repository, '_blank')}
           >
-            官网链接
+            GitHub 源码
           </div>
           <div
             className={styles['header-right-text']}
-            onClick={() =>
-              window.open(
-                'https://www.volcengine.com/contact/product?t=%E5%AF%B9%E8%AF%9D%E5%BC%8Fai&source=%E4%BA%A7%E5%93%81%E5%92%A8%E8%AF%A2',
-                '_blank'
-              )
-            }
+            onClick={() => window.open(TestResults, '_blank')}
           >
-            联系我们
+            项目验收
           </div>
         </div>
       )}
