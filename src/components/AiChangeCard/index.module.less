@@ -12,17 +12,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 20px;
 
   .avatar {
     img {
-      width: 128px;
-      height: 128px;
+      width: 132px;
+      height: 132px;
     }
     border-radius: 50%;
-    width: 128px;
-    height: 128px;
-    background: linear-gradient(180deg, #c3e4ff 0%, #98d6fe 100%);
+    width: 132px;
+    height: 132px;
+    padding: 5px;
+    background: linear-gradient(145deg, rgba(67, 111, 255, 0.18), rgba(187, 92, 231, 0.18));
+    box-shadow: 0 18px 48px rgba(68, 73, 151, 0.13);
   }
 
   .title {
@@ -32,12 +34,42 @@
     color: #1d2129;
   }
 
+  .eyebrow {
+    width: max-content;
+    margin: 0 auto 10px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    color: #6755cf;
+    background: rgba(103, 85, 207, 0.08);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    letter-spacing: 0.05em;
+  }
+
   .desc {
     margin-top: 8px;
     font-weight: 400;
     font-size: 14px;
     line-height: 22px;
     color: #737a87;
+  }
+
+  .featureList {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+
+    span {
+      padding: 6px 11px;
+      border: 1px solid rgba(91, 75, 219, 0.12);
+      border-radius: 10px;
+      color: #565d73;
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      line-height: 18px;
+      box-shadow: 0 6px 18px rgba(48, 50, 95, 0.05);
+    }
   }
 
   .exceededTitle {
@@ -60,5 +92,30 @@
     gap: 8px;
     justify-content: center;
     width: max-content;
+  }
+
+  @media screen and (max-width: 760px) {
+    gap: 16px;
+
+    .avatar {
+      width: 112px;
+      height: 112px;
+
+      img {
+        width: 112px;
+        height: 112px;
+      }
+    }
+
+    .title {
+      font-size: 21px;
+      line-height: 29px;
+      padding: 0 24px;
+    }
+
+    .desc {
+      font-size: 13px;
+      line-height: 20px;
+    }
   }
 }

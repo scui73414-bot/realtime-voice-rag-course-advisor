@@ -91,7 +91,7 @@ async def get_scenes(request: Request):
                     "scene": {
                         # --- 补全的核心字段 ---
                         "id": "Custom",  # 建议改为 Custom，通常前端会根据这个 ID 做特殊处理
-                        "name": "自定义助手",
+                        "name": "懂小智课程顾问",
                         # 必须与 StartVoiceChat 的 AgentConfig.UserId 保持一致，
                         # 否则前端会把智能体字幕当作未知用户消息过滤掉。
                         "botName": settings.RTC_AGENT_USER_ID,

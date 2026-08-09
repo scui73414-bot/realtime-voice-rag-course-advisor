@@ -4,13 +4,15 @@
  */
 
 .header {
-  height: 48px;
-  background: white;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
+  border-bottom: 1px solid rgba(91, 75, 219, 0.08);
 
   :global {
     .arco-popover-content-top {
@@ -23,16 +25,47 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-left: 24px;
+  margin-left: 22px;
+  gap: 12px;
 
   :global {
-    img {
-      height: 24px;
-    }
     .arco-popover-content {
       padding: 0;
     }
   }
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(145deg, #315efb 0%, #7656e8 55%, #c05be5 100%);
+  box-shadow: 0 8px 20px rgba(91, 75, 219, 0.2);
+}
+
+.brand-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand-name {
+  color: #171a2c;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.brand-subtitle {
+  color: #6b7085;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .menu-wrapper {
@@ -56,6 +89,8 @@
   color: #fff;
   display: flex;
   align-items: center;
+  gap: 8px;
+  margin-right: 22px;
   :global {
     span {
       height: 24px;
@@ -66,7 +101,7 @@
 .header-setting-btn {
   background-color: transparent;
   border: none;
-  margin-right: 24px;
+  margin-right: 2px;
   color: #000000;
   font-size: 16px;
   cursor: pointer;
@@ -123,7 +158,41 @@
 }
 
 .header-right-text {
-  color: #000000;
-  margin-right: 24px;
+  color: #4d5368;
   cursor: pointer;
+  padding: 7px 11px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+
+  &:hover {
+    color: #5b4bdb;
+    background: rgba(91, 75, 219, 0.08);
+  }
+}
+
+@media screen and (max-width: 760px) {
+  .header {
+    height: 56px;
+  }
+
+  .header-logo {
+    margin-left: 16px;
+    gap: 9px;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .brand-name {
+    font-size: 17px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
 }

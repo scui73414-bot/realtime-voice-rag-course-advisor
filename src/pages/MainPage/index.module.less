@@ -6,7 +6,7 @@
 .main {
   position: relative;
   width: 100%;
-  height: calc(100% - 48px);
+  height: calc(100% - 64px);
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -17,7 +17,10 @@
     width: calc(100% - 220px);
     height: 100%;
     margin-right: 2%;
-    background-color: white;
+    background:
+      radial-gradient(circle at 14% 16%, rgba(91, 75, 219, 0.08), transparent 32%),
+      radial-gradient(circle at 86% 78%, rgba(35, 168, 153, 0.08), transparent 30%),
+      white;
     border-radius: 16px;
     overflow: hidden;
     border: 1px solid var(--line-color-border-2, #eaedf1);
@@ -33,5 +36,9 @@
     position: relative;
     width: 200px;
     height: 100%;
+  }
+
+  @media screen and (max-width: 760px) {
+    height: calc(100% - 56px);
   }
 }

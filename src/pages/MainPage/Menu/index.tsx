@@ -29,12 +29,16 @@ function Menu() {
       ) : null}
       <div className={`${styles.box} ${styles.info}`}>
         <div className={styles.title}>AI 人设：{name}</div>
+        <div className={styles.statusLine}>
+          <span className={styles.statusDot} />
+          课程知识库已接入
+        </div>
       </div>
       {isJoined ? <Operation /> : ''}
       <div className={`${styles.box} ${styles.info}`}>
         <div className={styles.title}>{isJoined ? '其他信息' : '版本信息'}</div>
-        <div className={styles.desc}>Demo Version {packageJson.version}</div>
-        <div className={styles.desc}>SDK Version {VERTC.getSdkVersion()}</div>
+        <div className={styles.desc}>应用版本 {packageJson.version}</div>
+        <div className={styles.desc}>RTC SDK {VERTC.getSdkVersion()}</div>
         {isJoined ? (
           <div className={styles.desc}>
             房间ID{' '}

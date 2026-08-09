@@ -26,11 +26,17 @@ function AIChangeCard() {
         <img id="avatar-card" src={icon} alt="Avatar" />
       </div>
       <div className={style.title}>
-        <div>Hi，欢迎体验实时对话式 AI</div>
+        <div className={style.eyebrow}>知识库增强 · 实时语音</div>
+        <div>你好，我是懂小智</div>
         <div className={style.desc}>
-          {isVision ? <>支持豆包 Vision 模型和 深度思考模型，</> : ''}
-          超多对话场景等你开启
+          {isVision ? <>支持视觉理解，</> : ''}
+          基于课程资料，为你解答学习路线、项目内容与适合人群
         </div>
+      </div>
+      <div className={style.featureList} aria-label="核心能力">
+        <span>实时语音</span>
+        <span>课程 RAG</span>
+        <span>同步字幕</span>
       </div>
       <div className={style.sceneContainer}>
         {Scenes.map((key: SceneConfig) =>

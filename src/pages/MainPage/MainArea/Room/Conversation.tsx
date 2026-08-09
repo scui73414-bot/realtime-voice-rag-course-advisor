@@ -24,7 +24,7 @@ function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtit
   const { isAITalking, isUserTalking, scene } = useSelector((state: RootState) => state.room);
   const isAIReady = msgHistory.length > 0;
   const containerRef = useRef<HTMLDivElement>(null);
-  const { botName, icon, isAvatarScene } = useScene();
+  const { botName, icon, isAvatarScene, name } = useScene();
 
   const isUserTextLoading = (owner: string) => {
     return owner === userId && isUserTalking;
@@ -82,7 +82,7 @@ function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtit
                 <div className={styles.avatar}>
                   <img src={isUserMsg ? USER_AVATAR : icon} alt="Avatar" />
                 </div>
-                {isUserMsg ? '我' : scene}
+                {isUserMsg ? '我' : name || scene}
               </div>
             )}
             <div
